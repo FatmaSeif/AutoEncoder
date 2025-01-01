@@ -1,4 +1,5 @@
+streamlit
+numpy
 tensorflow
-opencv-headless
+Pillow
 matplotlib
-pillow
