@@ -65,14 +65,37 @@ def apply_grayscale(image_array, model):
 
     return grayscale_image
 
-def apply_noise_effect(image_array, model):
-    # Add random noise to the image
-    noise = np.random.normal(loc=0.0, scale=0.1, size=image_array.shape)
-    noisy_image = np.clip(image_array + noise, 0, 1)  # Ensure values are in range [0, 1]
-
-    # Pass the noisy image through the autoencoder
+def apply_noise_effect(image_array, model, noise_type='gaussian', noise_level=0.1):
+    """
+    Add noise to the input image and then reconstruct using the autoencoder.
+    
+    Arguments:
+    - image_array: The image to which noise is applied (shape: (1, height, width, channels)).
+    - model: The trained autoencoder model for reconstruction.
+    - noise_type: Type of noise to add ('gaussian', 'salt_and_pepper').
+    - noise_level: The standard deviation for the Gaussian noise or the fraction for salt-and-pepper noise.
+    
+    Returns:
+    - noisy_image: The image after noise has been added.
+    - reconstructed_image: The image after being processed by the autoencoder.
+    """
+    
+    # Adding noise to the image
+    if noise_type == 'gaussian':
+        noise = np.random.normal(loc=0.0, scale=noise_level, size=image_array.shape)
+        noisy_image = np.clip(image_array + noise, 0, 1)  # Ensure values are in range [0, 1]
+        
+    elif noise_type == 'salt_and_pepper':
+        noisy_image = image_array.copy()
+        # Generate random salt-and-pepper noise
+        salt_pepper_noise = np.random.rand(*image_array.shape)
+        noisy_image[salt_pepper_noise < noise_level / 2] = 0  # Pepper noise (black)
+        noisy_image[salt_pepper_noise > 1 - noise_level / 2] = 1  # Salt noise (white)
+    
+    # Pass the noisy image through the autoencoder to reconstruct
     reconstructed_image = model.predict(noisy_image)
-    return reconstructed_image
+    
+    return noisy_image, reconstructed_image
 
 def apply_rgb(image_array, model):
     # Pass the image through the encoder layers only
@@ -134,30 +157,6 @@ def detect_anomalies(image_array, model):
 
     return anomaly_map
 
-
-def apply_low_pass_filter(image_array, kernel_size=5):
-    """
-    Applies a low-pass filter (Gaussian Blur) to the image.
-
-    Parameters:
-    - image_array: Input image as a NumPy array (batch dimension optional).
-    - kernel_size: Size of the Gaussian kernel (odd integer).
-
-    Returns:
-    - Low-pass filtered image as a NumPy array.
-    """
-    # Remove the batch dimension if present
-    if len(image_array.shape) == 4:
-        image_array = image_array[0]  # Remove the batch dimension
-
-    # Ensure kernel size is odd
-    if kernel_size % 2 == 0:
-        kernel_size += 1
-
-    # Apply Gaussian Blur
-    low_pass_image = cv2.GaussianBlur(image_array, (kernel_size, kernel_size), 0)
-    return low_pass_image
-
 import cv2
 import numpy as np
 
@@ -187,36 +186,33 @@ def run_app():
             with col1:
                 # Apply Grayscale effect
                 transformed_image_grayscale = apply_grayscale(image_array, model)
-                st.image(transformed_image_grayscale, caption="Grayscale Effect")
+                st.image(transformed_image_grayscale, caption="Grayscale Image")
 
                 # Apply Red effect
                 transformed_image_red = apply_red_effect(image_array, model)
-                st.image(transformed_image_red, caption="Red Effect")
+                st.image(transformed_image_red, caption="Red Image")
 
                 # Apply RGB effect
                 transformed_image_rgb = apply_rgb(image_array, model)
-                st.image(transformed_image_rgb, caption="RGB Effect")
+                st.image(transformed_image_rgb, caption="RGB Image")
 
                  # Apply RGB effect
                 transformed_anomaly = detect_anomalies(image_array, model)
-                st.image(transformed_anomaly, caption="Anomalies Detection")
+                st.image(transformed_anomaly, caption="Anomalies Image")
 
             with col2:
                 # Apply X-ray effect
                 transformed_image_xray = apply_xray_effect(image_array, model)
-                st.image(transformed_image_xray[0], caption="X-ray Effect")
+                st.image(transformed_image_xray[0], caption="X-ray Image")
 
                 # Apply Noise effect
-                transformed_image_noise = apply_noise_effect(image_array, model)
-                st.image(transformed_image_noise, caption="Noise Effect")
+                noisy_image, reconstructed_image = apply_noise_effect(image_array, model)
+                st.image(noisy_image, caption="Noise Image")
+                st.image(reconstructed_image, caption="Denoise Image")
 
                 # Apply Compressed effect
                 transformed_image_reconstruct = compress_and_reconstruct(image_array, model)
-                st.image(transformed_image_reconstruct, caption="Compressed Effect")
-
-                # Apply Compressed effect
-                transformed_image_lowpass = apply_low_pass_filter(image_array)
-                st.image(transformed_image_lowpass, caption="Lowpass Effect")
+                st.image(transformed_image_reconstruct, caption="Compressed Image")
 
 if __name__ == "__main__":
     run_app()
