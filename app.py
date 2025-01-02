@@ -5,6 +5,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from PIL import Image
 import matplotlib.pyplot as plt
+import cv2
 
 # Load the pre-trained model
 def load_model():
@@ -100,6 +101,11 @@ def apply_rgb(image_array, model):
 
     return filtered_image
 
+def compress_and_reconstruct(image_array, model):
+    # Compress and reconstruct
+    reconstructed = model.predict(image_array)
+    return reconstructed
+
 # Function to apply the X-ray effect using the autoencoder
 def apply_xray_effect(image_array, model):
     # Pass the image through the encoder layers only
@@ -114,6 +120,47 @@ def apply_xray_effect(image_array, model):
     xray_image = decoder_model.predict(xray_effect)
     return xray_image
 
+def detect_anomalies(image_array, model):
+    # Pass the image through the model (autoencoder) for reconstruction
+    reconstructed_image = model.predict(image_array)
+    
+    # Ensure the two images (input and reconstructed) have the same size
+    if image_array.shape != reconstructed_image.shape:
+        reconstructed_image = cv2.resize(reconstructed_image[0], (image_array.shape[2], image_array.shape[1]))
+        reconstructed_image = np.expand_dims(reconstructed_image, axis=0)
+    
+    # Calculate anomaly map by comparing the original and reconstructed images
+    anomaly_map = np.abs(image_array - reconstructed_image)
+
+    return anomaly_map
+
+
+def apply_low_pass_filter(image_array, kernel_size=5):
+    """
+    Applies a low-pass filter (Gaussian Blur) to the image.
+
+    Parameters:
+    - image_array: Input image as a NumPy array (batch dimension optional).
+    - kernel_size: Size of the Gaussian kernel (odd integer).
+
+    Returns:
+    - Low-pass filtered image as a NumPy array.
+    """
+    # Remove the batch dimension if present
+    if len(image_array.shape) == 4:
+        image_array = image_array[0]  # Remove the batch dimension
+
+    # Ensure kernel size is odd
+    if kernel_size % 2 == 0:
+        kernel_size += 1
+
+    # Apply Gaussian Blur
+    low_pass_image = cv2.GaussianBlur(image_array, (kernel_size, kernel_size), 0)
+    return low_pass_image
+
+import cv2
+import numpy as np
+
 # Streamlit application
 def run_app():
     st.title("Image Effects with Autoencoder")
@@ -124,7 +171,7 @@ def run_app():
     if uploaded_image is not None:
         # Open the uploaded image
         image = Image.open(uploaded_image)
-        st.image(image, caption='Uploaded Image', use_container_width=True)
+        st.image(image, caption='Uploaded Image')
 
         # Load the pre-trained model
         model = load_model()
@@ -140,24 +187,36 @@ def run_app():
             with col1:
                 # Apply Grayscale effect
                 transformed_image_grayscale = apply_grayscale(image_array, model)
-                st.image(transformed_image_grayscale, caption="Grayscale Effect", use_container_width=True)
+                st.image(transformed_image_grayscale, caption="Grayscale Effect")
 
                 # Apply Red effect
                 transformed_image_red = apply_red_effect(image_array, model)
-                st.image(transformed_image_red, caption="Red Effect", use_container_width=True)
+                st.image(transformed_image_red, caption="Red Effect")
 
                 # Apply RGB effect
                 transformed_image_rgb = apply_rgb(image_array, model)
-                st.image(transformed_image_rgb, caption="RGB Effect", use_container_width=True)
+                st.image(transformed_image_rgb, caption="RGB Effect")
+
+                 # Apply RGB effect
+                transformed_anomaly = detect_anomalies(image_array, model)
+                st.image(transformed_anomaly, caption="Anomalies Detection")
 
             with col2:
                 # Apply X-ray effect
                 transformed_image_xray = apply_xray_effect(image_array, model)
-                st.image(transformed_image_xray[0], caption="X-ray Effect", use_container_width=True)
+                st.image(transformed_image_xray[0], caption="X-ray Effect")
 
                 # Apply Noise effect
                 transformed_image_noise = apply_noise_effect(image_array, model)
-                st.image(transformed_image_noise, caption="Noise Effect", use_container_width=True)
+                st.image(transformed_image_noise, caption="Noise Effect")
+
+                # Apply Compressed effect
+                transformed_image_reconstruct = compress_and_reconstruct(image_array, model)
+                st.image(transformed_image_reconstruct, caption="Compressed Effect")
+
+                # Apply Compressed effect
+                transformed_image_lowpass = apply_low_pass_filter(image_array)
+                st.image(transformed_image_lowpass, caption="Lowpass Effect")
 
 if __name__ == "__main__":
     run_app()
