@@ -181,6 +181,9 @@ def run_app():
         # Create columns for displaying the effects
         col1, col2 = st.columns(2)
 
+        noisy_image, reconstructed_image = apply_noise_effect(image_array, model)
+
+
         # Display loader while effects are being applied
         with st.spinner('Applying effects...'):
             with col1:
@@ -192,11 +195,9 @@ def run_app():
                 transformed_image_red = apply_red_effect(image_array, model)
                 st.image(transformed_image_red, caption="Red Image")
 
-                # Apply RGB effect
-                transformed_image_rgb = apply_rgb(image_array, model)
-                st.image(transformed_image_rgb, caption="RGB Image")
+                # Apply Noise effect
+                st.image(noisy_image, caption="Noise Image")
 
-                 # Apply RGB effect
                 transformed_anomaly = detect_anomalies(image_array, model)
                 st.image(transformed_anomaly, caption="Anomalies Image")
 
@@ -205,9 +206,10 @@ def run_app():
                 transformed_image_xray = apply_xray_effect(image_array, model)
                 st.image(transformed_image_xray[0], caption="X-ray Image")
 
-                # Apply Noise effect
-                noisy_image, reconstructed_image = apply_noise_effect(image_array, model)
-                st.image(noisy_image, caption="Noise Image")
+                # Apply RGB effect
+                transformed_image_rgb = apply_rgb(image_array, model)
+                st.image(transformed_image_rgb, caption="RGB Image")
+
                 st.image(reconstructed_image, caption="Denoise Image")
 
                 # Apply Compressed effect
