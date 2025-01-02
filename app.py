@@ -162,7 +162,7 @@ import numpy as np
 
 # Streamlit application
 def run_app():
-    st.title("Image Effects with Autoencoder")
+    st.title("Image Outputs with Autoencoder")
 
     # Upload image
     uploaded_image = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
